@@ -163,6 +163,17 @@ const SpaceShipGame = ({ onGameOver }) => {
       asteroids.current.push(asteroid);
     };
 
+    
+    // Limita la posición de la nave dentro de la pantalla
+    const limitShipPosition = (ship) => {
+      const aspectRatio = window.innerWidth / window.innerHeight;
+      const limitX = 1 * aspectRatio; // Limite horizontal (ajustable)
+      const limitY = 1; // Limite vertical (ajustable)
+
+      ship.position.x = Math.max(-limitX, Math.min(limitX, ship.position.x));
+      ship.position.y = Math.max(-limitY, Math.min(limitY, ship.position.y));
+    };  
+
     const animate = () => {
       if (gameOver) return;
       requestAnimationFrame(animate);
@@ -185,6 +196,7 @@ const SpaceShipGame = ({ onGameOver }) => {
       if (shipRef.current) {
         shipRef.current.position.x += (mousePosition.current.x * 3 - shipRef.current.position.x) * 0.1;
         shipRef.current.position.y += (mousePosition.current.y * 2 - shipRef.current.position.y) * 0.1;
+        limitShipPosition(shipRef.current);
         shipRef.current.lookAt(new THREE.Vector3(0, 0, -1));
       }
 
