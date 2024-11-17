@@ -16,9 +16,14 @@ const SpaceShipGame = ({ onGameOver }) => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(10);
   const [gameOver, setGameOver] = useState(false);
+  const gameOverCalled = useRef(false); // Asegura que `onGameOver` solo se llame una vez
+
+
+  
   
 
   useEffect(() => {
+    let animationFrameId; // Referencia para detener la animación
     let stars, starGeo;
 
     const init = () => {
@@ -28,7 +33,7 @@ const SpaceShipGame = ({ onGameOver }) => {
         75,
         window.innerWidth / window.innerHeight,
         0.1,
-        1000
+        5000
       );
       cameraRef.current.position.z = 5;
 
@@ -61,21 +66,31 @@ const SpaceShipGame = ({ onGameOver }) => {
       sceneRef.current.add(stars);
 
       // Load spaceship model
-      const loader = new GLTFLoader();
-      loader.load(
-        "/models/spaceship.glb",
-        (gltf) => {
-          const ship = gltf.scene;
-          ship.scale.set(-0.05, 0.05, 0.05);
-          ship.position.z = 3;
-          sceneRef.current.add(ship);
-          shipRef.current = ship;
-        },
-        undefined,
-        (error) => {
-          console.error("Error loading spaceship model", error);
-        }
-      );
+      if (!shipRef.current) {  // Evita duplicar la nave
+        const loader = new GLTFLoader();
+        loader.load(
+          "/models/spaceship.glb",
+          (gltf) => {
+            const ship = gltf.scene;
+            ship.scale.set(-0.05, 0.05, 0.05);
+            ship.position.z = 3;
+            if (shipRef.current) {
+              sceneRef.current.remove(shipRef.current);
+            }
+      
+            shipRef.current = ship; // Asigna la nave cargada
+            sceneRef.current.add(shipRef.current); // Agrégala a la escena
+          },
+          undefined,
+          (error) => {
+            console.error("Error loading spaceship model", error);
+          }
+        );
+      } else {
+        // Solo reinicia la posición de la nave si ya existe
+        shipRef.current.position.set(0, 0, 3);
+        sceneRef.current.add(shipRef.current);
+      }
 
       // Load asteroid model
       const loader2 = new GLTFLoader();
@@ -144,7 +159,7 @@ const SpaceShipGame = ({ onGameOver }) => {
     const spawnAsteroid = () => {
       if (!asteroidModel.current) return;
       const asteroid = asteroidModel.current.clone();
-      const zPosition = -15;
+      const zPosition = -100;
       const distance = Math.abs(zPosition - cameraRef.current.position.z);
       const vFov = (cameraRef.current.fov * Math.PI) / 180;
       const height = 2 * Math.tan(vFov / 2) * distance;
@@ -175,8 +190,16 @@ const SpaceShipGame = ({ onGameOver }) => {
     };  
 
     const animate = () => {
-      if (gameOver) return;
-      requestAnimationFrame(animate);
+      if (gameOver) {
+        if (!gameOverCalled.current ) {
+          gameOverCalled.current = true; // Marca como ya llamado
+          console.log("Game over 1:", score); // Debug
+          onGameOver(score); // Llama al manejador solo una vez
+        }
+        return; // Detén la animación
+      }
+      // Animación normal aquí...
+      animationFrameId = requestAnimationFrame(animate);
 
       const lasersToRemove = [];
       const asteroidsToRemove = [];
@@ -237,19 +260,25 @@ const SpaceShipGame = ({ onGameOver }) => {
 
       if (lives <= 0 && !gameOver) {
         setGameOver(true);
-        onGameOver(score);
+        console.log("Game overrrrrrr:", score); // Debug
+        cancelAnimationFrame(animationFrameId);
+
       }
     };
-
+ 
     init();
 
     return () => {
+      if (shipRef.current) {
+        sceneRef.current.remove(shipRef.current);
+      }
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", onWindowResize);
       window.removeEventListener("click", shootLaser);
       containerRef.current.removeChild(rendererRef.current.domElement);
+      
     };
-  }, [lives, gameOver, onGameOver]);
+  }, [lives, gameOver]);
 
   return (
     <div>
