@@ -17,16 +17,32 @@ const SpaceShipGame = ({ onGameOver }) => {
   const [lives, setLives] = useState(1);
   const [gameOver, setGameOver] = useState(false);
   const gameOverCalled = useRef(false); // Asegura que `onGameOver` solo se llame una vez
-
-
-  
-  
+  const [invulnerable, setInvulnerable] = useState(false);
+  const invulnerableTime = 699; // Tiempo de invulnerabilidad en milisegundos
+  const backgroundMusic = useRef(null); // Referencia para la música de fondo
+    
 
   useEffect(() => {
     let animationFrameId; // Referencia para detener la animación
     let stars, starGeo;
 
     const init = () => {
+
+      const listener = new THREE.AudioListener();
+      if (cameraRef.current) {
+        cameraRef.current.add(listener);
+      }
+  
+      // Cargar el audio de fondo
+      backgroundMusic.current = new THREE.Audio(listener);
+      const audioLoader = new THREE.AudioLoader();
+      audioLoader.load("/sounds/space1.mp3", (buffer) => {
+        backgroundMusic.current.setBuffer(buffer);
+        backgroundMusic.current.setLoop(true); // Reproducción en bucle
+        backgroundMusic.current.setVolume(0.3); // Ajusta el volumen según lo necesario
+        backgroundMusic.current.play(); // Inicia la reproducción
+      });
+
       // Initialize scene, camera, renderer
       sceneRef.current = new THREE.Scene();
       cameraRef.current = new THREE.PerspectiveCamera(
@@ -137,6 +153,9 @@ const SpaceShipGame = ({ onGameOver }) => {
 
     // Laser shooting
     const shootLaser = () => {
+      const laserSound = new Audio("sounds/scifi002.mp3");
+      laserSound.play();
+
       const laser = new THREE.Mesh(
         new THREE.BoxGeometry(0.1, 0.1, 0.5),
         new THREE.MeshBasicMaterial({ color: 0xff0000 })
@@ -157,7 +176,7 @@ const SpaceShipGame = ({ onGameOver }) => {
 
     // Asteroid spawning
     const spawnAsteroid = () => {
-      if (!asteroidModel.current) return;
+    if (gameOver|| !asteroidModel.current || asteroids.current.length > 0) return; // Si ya hay un asteroide, no genera otro.
       const asteroid = asteroidModel.current.clone();
       const zPosition = -100;
       const distance = Math.abs(zPosition - cameraRef.current.position.z);
@@ -175,7 +194,8 @@ const SpaceShipGame = ({ onGameOver }) => {
         .multiplyScalar(0.17);
       asteroid.userData.hit = false;
       sceneRef.current.add(asteroid);
-      asteroids.current.push(asteroid);
+      asteroids.current.push(asteroid); 
+      console.log("Asteroides actuales:", asteroids.current.length);
     };
 
     
@@ -245,12 +265,28 @@ const SpaceShipGame = ({ onGameOver }) => {
           }
         });
 
-        if (asteroid.position.distanceTo(cameraRef.current.position) < 0.7 && !asteroid.userData.hit) {
+        // Comprobamos si el asteroide colide con la nave y si no estamos invulnerables
+        if (asteroid.position.distanceTo(cameraRef.current.position) < 0.7 && !asteroid.userData.hit && !invulnerable) {
           asteroid.userData.hit = true;
           sceneRef.current.remove(asteroid);
           asteroidsToRemove.push(asteroidIndex);
           setLives((prevLives) => prevLives - 1);
+
+          // Activar la invulnerabilidad por un tiempo
+          setInvulnerable(true);
+          setTimeout(() => setInvulnerable(false), invulnerableTime); // Desactivar la invulnerabilidad después del tiempo
         }
+
+        // Detectar laser colision con asteroide
+        lasers.current.forEach((laser, laserIndex) => {
+          if (laser.position.distanceTo(asteroid.position) < 0.5) {
+            sceneRef.current.remove(asteroid);
+            sceneRef.current.remove(laser);
+            asteroidsToRemove.push(asteroidIndex);
+            lasersToRemove.push(laserIndex);
+            setScore((prevScore) => prevScore + 1);
+          }
+        });
       });
 
       lasersToRemove.forEach((index) => lasers.current.splice(index, 1));
@@ -259,12 +295,17 @@ const SpaceShipGame = ({ onGameOver }) => {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
 
       if (lives <= 0 && !gameOver) {
+        console.log("game2",gameOver)
         setGameOver(true);
-        console.log("Game overrrrrrr:", score); // Debug
+        console.log("Game over if:", score); // Debug
         cancelAnimationFrame(animationFrameId);
 
       }
     };
+
+    if (gameOver && backgroundMusic.current) {
+      backgroundMusic.current.stop();
+    }
  
     init();
 
@@ -272,9 +313,11 @@ const SpaceShipGame = ({ onGameOver }) => {
       if (shipRef.current) {
         sceneRef.current.remove(shipRef.current);
       }
+
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", onWindowResize);
       window.removeEventListener("click", shootLaser);
+     
       
     };
   }, [lives, gameOver]);
@@ -283,7 +326,7 @@ const SpaceShipGame = ({ onGameOver }) => {
     <div>
       <div ref={containerRef} className="starry-background" />
       <div style={{ position: "absolute", top: 20, left: 20, color: "white" }}>
-        Score: {score} | Lives: {lives}
+        Score: {score}
       </div>
     </div>
   );
