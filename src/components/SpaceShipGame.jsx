@@ -2,9 +2,6 @@ import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import "../styles/StarryBackground.css";
-import GameOver from "./GameOver";
-
-
 
 const SpaceShipGame = ({ onGameOver }) => {
   const containerRef = useRef(null);
@@ -320,32 +317,17 @@ const SpaceShipGame = ({ onGameOver }) => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", onWindowResize);
       window.removeEventListener("click", shootLaser);
-      containerRef.current.removeChild(rendererRef.current.domElement);
+     
       
     };
   }, [lives, gameOver]);
 
   return (
-    <div> 
-      {!gameOver && (
-        <>
-          <div ref={containerRef} className="starry-background" />
-          <div style={{ position: "absolute", top: 20, left: 20, color: "white" }}>
-            Score: {score} | Lives: {lives}
-          </div>
-        </>
-      )}
-      {gameOver && (
-        <GameOver
-          score={score}
-          onRestart={() => {
-            setLives(10);
-            setScore(0);
-            setGameOver(false);
-            gameOverCalled.current = false;
-          }}
-        />
-      )}
+    <div>
+      <div ref={containerRef} className="starry-background" />
+      <div style={{ position: "absolute", top: 20, left: 20, color: "white" }}>
+        Score: {score}
+      </div>
     </div>
   );
 };
