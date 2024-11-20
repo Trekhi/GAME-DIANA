@@ -26,6 +26,8 @@ const SpaceShipGame = ({ onGameOver }) => {
     let animationFrameId; // Referencia para detener la animación
     let stars, starGeo;
 
+    
+
     const init = () => {
 
       const listener = new THREE.AudioListener();
@@ -36,11 +38,15 @@ const SpaceShipGame = ({ onGameOver }) => {
       // Cargar el audio de fondo
       backgroundMusic.current = new THREE.Audio(listener);
       const audioLoader = new THREE.AudioLoader();
-      audioLoader.load("/sounds/space1.mp3", (buffer) => {
+      audioLoader.load("/sounds/tambor_23.mp3", (buffer) => {
         backgroundMusic.current.setBuffer(buffer);
         backgroundMusic.current.setLoop(true); // Reproducción en bucle
         backgroundMusic.current.setVolume(0.3); // Ajusta el volumen según lo necesario
-        backgroundMusic.current.play(); // Inicia la reproducción
+
+            // Reproducir música solo cuando el juego comienza
+        if (!gameOver) {
+          backgroundMusic.current.play(); // Inicia la reproducción
+        }
       });
 
       // Initialize scene, camera, renderer
@@ -191,7 +197,7 @@ const SpaceShipGame = ({ onGameOver }) => {
       asteroid.userData.velocity = new THREE.Vector3()
         .subVectors(cameraRef.current.position, asteroid.position)
         .normalize()
-        .multiplyScalar(0.17);
+        .multiplyScalar(0.57); //velocidad
       asteroid.userData.hit = false;
       sceneRef.current.add(asteroid);
       asteroids.current.push(asteroid); 
@@ -215,9 +221,16 @@ const SpaceShipGame = ({ onGameOver }) => {
           gameOverCalled.current = true; // Marca como ya llamado
           console.log("Game over 1:", score); // Debug
           onGameOver(score); // Llama al manejador solo una vez
+                  // Detén la música cuando el juego termine
+          if (backgroundMusic.current) {
+            backgroundMusic.current.stop();
+          }
         }
+      
+
         return; // Detén la animación
       }
+
       // Animación normal aquí...
       animationFrameId = requestAnimationFrame(animate);
 
@@ -303,9 +316,6 @@ const SpaceShipGame = ({ onGameOver }) => {
       }
     };
 
-    if (gameOver && backgroundMusic.current) {
-      backgroundMusic.current.stop();
-    }
  
     init();
 
@@ -321,7 +331,7 @@ const SpaceShipGame = ({ onGameOver }) => {
       
     };
   }, [lives, gameOver]);
-
+                                                                
   return (
     <div>
       <div ref={containerRef} className="starry-background" />
